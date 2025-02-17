@@ -1,0 +1,72 @@
+name: Publish to Homebrew
+
+on:
+  push:
+    tags:
+      - "v*"  # Triggers on tags that start with 'v', e.g. v0.2.0
+
+jobs:
+  brew-publish:
+    name: Homebrew Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the code at the tagged commit
+      - uses: actions/checkout@v3
+
+      # 2. Set up Git config if you need to push to another repo or your tap
+      - name: Configure git for push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # 3. Grab the tag and version
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          # Tag will look like 'v0.2.0'
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      # 4. Create an archive (tarball) of the source code
+      - name: Create source tarball
+        run: |
+          git archive --format=tar.gz --prefix=clunk-$VERSION/ HEAD > clunk-$VERSION.tar.gz
+          ls -lh clunk-$VERSION.tar.gz
+
+      # 5. Calculate SHA-256
+      - name: Compute SHA256
+        id: compute_sha
+        run: |
+          CHECKSUM=$(sha256sum clunk-$VERSION.tar.gz | cut -d ' ' -f1)
+          echo "CHECKSUM=$CHECKSUM" >> $GITHUB_OUTPUT
+
+      # 6. Clone your tap repository (or use the same repo in a different branch)
+      - name: Clone Homebrew tap
+        run: |
+          git clone --depth=1 "https://github.com/YOUR_USERNAME/homebrew-clunk.git" homebrew-clunk
+          cd homebrew-clunk
+          # If you have a separate branch for formula updates, checkout that here.
+
+      # 7. Update the Formula file with new version, URL, and sha256
+      - name: Update Formula
+        run: |
+          cd homebrew-clunk
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          CHECKSUM="${{ steps.compute_sha.outputs.CHECKSUM }}"
+
+          # Suppose your formula file is "clunk.rb"
+          # We'll do a small in-place edit. Adjust to match your formula structure.
+          sed -i "s|url .*|url \"https://github.com/YOUR_USERNAME/clunk/archive/refs/tags/v${VERSION}.tar.gz\"|g" Formula/clunk.rb
+          sed -i "s|sha256 \".*\"|sha256 \"${CHECKSUM}\"|g" Formula/clunk.rb
+          # Optionally update `version` in the formula if it isn't auto-derived.
+
+      # 8. Commit and push changes to your tap
+      - name: Commit and push
+        run: |
+          cd homebrew-clunk
+          git add Formula/clunk.rb
+          git commit -m "Release clunk v${{ steps.get_version.outputs.VERSION }}"
+          git push origin main  # or whichever branch
+
+      # 9. Done! Now your updated Formula should be live in your Tap.
