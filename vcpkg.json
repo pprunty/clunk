@@ -1,7 +1,11 @@
 {
   "name": "clunk",
-  "version": "0.1.0",
+  "version-string": "0.1.0",
   "dependencies": [
-    "nlohmann-json"
+    "boost-beast",
+    "boost-asio",
+    "nlohmann-json",
+    "gtest",
+    "benchmark"
   ]
 }

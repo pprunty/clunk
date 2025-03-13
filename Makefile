@@ -2,7 +2,7 @@
 
 TARGET = clunk
 BUILD_DIR = build
-CXXFLAGS = -O3 -Wall
+CXXFLAGS = -O3 -Wall -std=c++17
 VERSION = 0.1.0  # Sync this with project(clunk VERSION x.y.z) or parse from CMake if desired
 
 # Path to the vcpkg toolchain file (adjust if your vcpkg folder is elsewhere).
@@ -25,40 +25,47 @@ help:
 	@echo "  build         - Configure and build the project (using vcpkg toolchain)"
 	@echo "  clean         - Remove build artifacts"
 	@echo "  test          - Run tests using ctest"
-	@echo "  install       - Install the project (requires sudo)"
-	@echo "  run           - Build and run the executable"
-	@echo "  publish-brew  - Example step to prepare/publish a new version to Homebrew"
+	@echo "  benchmark     - Run benchmarks"
+	@echo "  install       - Install the project to BUILD_DIR/install"
+	@echo "  install-sudo  - Install the project to system directories (requires sudo)"
+	@echo "  run           - Build and run the executable with default symbol (BTC-USD)"
+	@echo "  run-sym       - Build and run with a specific symbol (e.g., make run-sym SYM=ETH-USD)"
 	@echo "  help          - Show this help message (default target)"
 
 # Build the project
 build:
 	mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && cmake .. \
-	    -DCMAKE_CXX_FLAGS="$(CXXFLAGS)" \
-	    -DCMAKE_TOOLCHAIN_FILE="$(TOOLCHAIN_FILE)"
-	cd $(BUILD_DIR) && $(MAKE)
+		-DCMAKE_CXX_FLAGS="$(CXXFLAGS)" \
+		-DCMAKE_TOOLCHAIN_FILE="$(TOOLCHAIN_FILE)"
+	cd $(BUILD_DIR) && cmake --build .
 
 # Clean build directory
 clean:
 	rm -rf $(BUILD_DIR)
 
 # Run tests
-test:
+test: build
 	cd $(BUILD_DIR) && ctest --output-on-failure
 
-# Run the program
+# Run benchmarks
+benchmark: build
+	cd $(BUILD_DIR) && ./benchmarks/clunk_benchmarks
+
+# Install the project to the build directory
+install: build
+	cd $(BUILD_DIR) && cmake --install .
+
+# Install the project to system directories (requires sudo)
+install-sudo: build
+	cd $(BUILD_DIR) && sudo cmake --install . --prefix /usr/local
+
+# Run the program with default symbol
 run: build
 	cd $(BUILD_DIR) && ./$(TARGET)
 
-# Publish (or update) the Homebrew formula
-publish-brew:
-	@echo "Preparing to publish version $(VERSION) to Homebrew..."
-	@echo "1) Make sure you have a Git tag for version $(VERSION)."
-	@echo "2) Create a tar.gz or zip archive of the source code."
-	@echo "3) Calculate the SHA-256 of that archive using 'shasum -a 256 <file>'."
-	@echo "4) Update Formula/clunk.rb to reflect the new URL and SHA256."
-	@echo "5) Commit and push changes to your Homebrew tap (or local usage)."
-	@echo "   brew install Formula/clunk.rb     # to test locally"
-	@echo "Done! You may still need to 'brew tap <user>/<repo>' if it's a custom tap."
+# Run with specific symbol
+run-sym: build
+	cd $(BUILD_DIR) && ./$(TARGET) $(SYM)
 
-.PHONY: build clean test run help publish-brew
+.PHONY: build clean test benchmark install install-sudo run run-sym help
