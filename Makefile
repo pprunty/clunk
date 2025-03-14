@@ -30,6 +30,7 @@ help:
 	@echo "  install-sudo  - Install the project to system directories (requires sudo)"
 	@echo "  run           - Build and run the executable with default symbol (BTC-USD)"
 	@echo "  run-sym       - Build and run with a specific symbol (e.g., make run-sym SYM=ETH-USD)"
+	@echo "  coinbase-test - Build and run a simple connectivity test to Coinbase sandbox"
 	@echo "  help          - Show this help message (default target)"
 
 # Build the project
@@ -68,4 +69,10 @@ run: build
 run-sym: build
 	cd $(BUILD_DIR) && ./$(TARGET) $(SYM)
 
-.PHONY: build clean test benchmark install install-sudo run run-sym help
+# Build and run the Coinbase connectivity test
+coinbase-test:
+	mkdir -p $(BUILD_DIR)
+	g++ -o $(BUILD_DIR)/coinbase_test src/coinbase_test.cpp -std=c++17 -I$(BUILD_DIR)/vcpkg_installed/arm64-osx/include -L$(BUILD_DIR)/vcpkg_installed/arm64-osx/lib -lboost_system
+	$(BUILD_DIR)/coinbase_test
+
+.PHONY: build clean test benchmark install install-sudo run run-sym coinbase-test help

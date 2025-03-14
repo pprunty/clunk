@@ -59,6 +59,9 @@ public:
     void processL3Update(const std::string& type, const std::string& order_id,
                         OrderSide side, double price, double size);
 
+    // Clear all orders from the order book
+    void clear();
+
 private:
     std::string symbol_;                                // Instrument symbol
 

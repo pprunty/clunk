@@ -1,12 +1,14 @@
 #pragma once
 
 #include "feed_handler.h"
-#include "../network/websocket_client.h"
-#include "../orderbook/order_book.h"
+#include "network/websocket_client.h"
+#include "orderbook/order_book.h"
 #include <nlohmann/json.hpp>
 #include <memory>
 #include <map>
 #include <mutex>
+#include <string>
+#include <unordered_map>
 
 namespace clunk {
 
@@ -34,22 +36,30 @@ public:
     // Check if connected
     bool isConnected() const override;
 
+    // Enable/disable verbose logging
+    void setVerboseLogging(bool enabled);
+
     // Get an order book for a symbol
     std::shared_ptr<OrderBook> getOrderBook(const std::string& symbol);
 
 private:
-    // Coinbase API details
+    // Coinbase API details - Using public WebSocket feed
+    // The wss:// prefix is handled by the WebSocket client
     static constexpr const char* kHost = "ws-feed.exchange.coinbase.com";
     static constexpr const char* kPort = "443";
+    static constexpr const char* kPath = "/ws";
 
     // Websocket client
     std::shared_ptr<WebSocketClient> ws_client_;
 
     // Order books by symbol
-    std::map<std::string, std::shared_ptr<OrderBook>> order_books_;
+    std::unordered_map<std::string, std::shared_ptr<OrderBook>> order_books_;
 
     // Mutex for protecting order books
     std::mutex mutex_;
+
+    // Verbose logging flag
+    bool verbose_logging_;
 
     // Handle a message from the feed
     void handleMessage(const std::string& message);
@@ -57,6 +67,8 @@ private:
     // Process different message types
     void processSnapshot(const nlohmann::json& json);
     void processL3Update(const nlohmann::json& json);
+    void processTicker(const nlohmann::json& json);
+    void processL2Update(const nlohmann::json& json);
 
     // Convert Coinbase order side to internal order side
     OrderSide convertOrderSide(const std::string& side);

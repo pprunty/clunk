@@ -24,9 +24,11 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 find_package(benchmark CONFIG REQUIRED)
 find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_BINARY_DIR}/vcpkg_installed/arm64-osx/include)
 
 # Main executable
 add_executable(clunk
@@ -44,6 +46,8 @@ target_link_libraries(clunk PRIVATE
     Boost::system
     nlohmann_json::nlohmann_json
     Threads::Threads
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 # Add tests subdirectory

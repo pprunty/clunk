@@ -249,4 +249,16 @@ void OrderBook::processL3Update(const std::string& type, const std::string& orde
     }
 }
 
+void OrderBook::clear() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    
+    // Clear all orders and price levels
+    orders_.clear();
+    bid_levels_.clear();
+    ask_levels_.clear();
+    
+    // Notify subscribers
+    notifyUpdate();
+}
+
 } // namespace clunk

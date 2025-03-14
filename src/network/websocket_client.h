@@ -1,9 +1,8 @@
 #pragma once
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/strand.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/system/error_code.hpp>
 #include <functional>
 #include <string>
 #include <memory>
@@ -14,22 +13,21 @@
 
 namespace clunk {
 
-namespace beast = boost::beast;
-namespace websocket = beast::websocket;
 namespace net = boost::asio;
+namespace ssl = boost::asio::ssl;
 using tcp = boost::asio::ip::tcp;
 
 // Callback type for receiving messages
 using MessageCallback = std::function<void(const std::string&)>;
 
-// WebSocket client for connecting to exchange APIs
+// Simple WebSocket client for connecting to exchange APIs
 class WebSocketClient : public std::enable_shared_from_this<WebSocketClient> {
 public:
     // Constructor
     WebSocketClient(const std::string& host, const std::string& port);
 
     // Destructor
-    ~WebSocketClient();
+    virtual ~WebSocketClient();
 
     // Connect to the server
     void connect();
@@ -44,18 +42,28 @@ public:
     void setMessageCallback(MessageCallback callback) {
         message_callback_ = callback;
     }
+    
+    // Set the path for WebSocket handshake
+    void setPath(const std::string& path) {
+        path_ = path;
+    }
 
     // Check if connected
     bool isConnected() const {
         return connected_;
     }
 
+    // Enable/disable verbose logging
+    void setVerboseLogging(bool enabled);
+
 private:
     std::string host_;
     std::string port_;
+    std::string path_ = "/";
 
     net::io_context ioc_;
-    std::unique_ptr<websocket::stream<tcp::socket>> ws_;
+    ssl::context ssl_ctx_{ssl::context::tlsv12_client};
+    std::unique_ptr<ssl::stream<tcp::socket>> ssl_stream_;
 
     std::thread io_thread_;
     std::atomic<bool> running_;
@@ -67,6 +75,9 @@ private:
     std::deque<std::string> send_queue_;
     std::mutex queue_mutex_;
 
+    // Verbose logging flag
+    bool verbose_logging_;
+
     // Connect to the server asynchronously
     void asyncConnect();
 
@@ -77,10 +88,15 @@ private:
     void asyncSend();
 
     // Handle connection failure
-    void handleError(beast::error_code ec, const char* what);
+    void handleError(const boost::system::error_code& ec, const char* what);
 
     // Process received message
     void processMessage(const std::string& message);
+    
+    // WebSocket-specific methods
+    void performWebSocketHandshake();
+    void readWebSocketResponse();
+    std::string generateWebSocketKey();
 };
 
 } // namespace clunk
